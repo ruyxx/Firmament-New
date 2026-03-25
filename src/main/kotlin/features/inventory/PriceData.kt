@@ -33,19 +33,7 @@ object PriceData {
 		val enableKeybinding by keyBindingWithDefaultUnbound("enable-keybind")
 		val stackSizeKey by keyBinding("stack-size-keybind") { GLFW.GLFW_KEY_LEFT_SHIFT }
 
-		// You can keep this config even if you show multiple averages; it just won’t be used.
-		val avgLowestBin by choice("avg-lowest-bin-days") { AvgLowestBin.THREEDAYAVGLOWESTBIN }
-
 		val bzPriceType by choice("bz-price-type") { BazaarPriceType.ORDERPRICES }
-	}
-
-	enum class AvgLowestBin : StringRepresentable {
-		OFF,
-		ONEDAYAVGLOWESTBIN,
-		THREEDAYAVGLOWESTBIN,
-		SEVENDAYAVGLOWESTBIN;
-
-		override fun getSerializedName(): String = name
 	}
 
 	enum class BazaarPriceType : StringRepresentable {
@@ -73,22 +61,15 @@ object PriceData {
 	// Pricing helpers
 	// -----------------------------
 
-	/** Market price for "BUY_ORDER" acquisition for crafting: Bazaar buyPrice, else LBIN. */
+	/** Market price for "BUY_ORDER" acquisition for crafting: Bazaar sellPrice (highest buy order = what you receive when instant-selling), else LBIN. */
 	private fun marketUnitPriceBuyOrder(id: SkyblockId): Double? {
 		HypixelStaticData.bazaarData[id.asBazaarStock]?.let { bz ->
-			return bz.quickStatus.buyPrice
-		}
-		return HypixelStaticData.lowestBin[id]
-	}
-
-	/** Estimated value (Skyblocker-like): Bazaar instant sell (sellPrice), else LBIN. */
-	private fun estimatedItemValue(id: SkyblockId): Double? {
-		HypixelStaticData.bazaarData[id.asBazaarStock]?.let { bz ->
-			// "value" if you dump it instantly on bazaar
+			// sellPrice = highest outstanding buy order = what you receive when instant-selling
 			return bz.quickStatus.sellPrice
 		}
 		return HypixelStaticData.lowestBin[id]
 	}
+
 
 	private fun computeCraftingCostDirectBuyOrder(sbId: SkyblockId): Double? {
 		val recipes = RepoManager.getRecipesFor(sbId)
@@ -218,84 +199,52 @@ object PriceData {
 				).darkGrey()
 
 		val bazaarData = HypixelStaticData.bazaarData[sbId?.asBazaarStock]
-		val lowestBin = HypixelStaticData.lowestBin[sbId]
 
 		val craftDirect = sbId?.let { computeCraftingCostDirectBuyOrder(it) }
 		val craftRecursive = sbId?.let { computeCraftingCostRecursiveBuyOrder(it) }
-		val estValue = sbId?.let { estimatedItemValue(it) }
 
-		val avg1d = HypixelStaticData.avg1dlowestBin[sbId]
-		val avg3d = HypixelStaticData.avg3dlowestBin[sbId]
-		val avg7d = HypixelStaticData.avg7dlowestBin[sbId]
-
-		if (bazaarData != null) {
+		if (bazaarData != null || craftDirect != null || craftRecursive != null) {
 			it.lines.add(Component.literal(""))
 			it.lines.add(multiplierText)
 
-			when (TConfig.bzPriceType) {
-				BazaarPriceType.ORDERPRICES -> {
-					// Correct mapping:
-					// buyPrice = buy order price (you place buy order)
-					// sellPrice = sell offer price (you instant buy)
-					it.lines.add(
-						formatPrice(
-							Component.literal("Bazaar Buy Order"),
-							bazaarData.quickStatus.buyPrice * multiplier
+			if (bazaarData != null) {
+				when (TConfig.bzPriceType) {
+					BazaarPriceType.ORDERPRICES -> {
+						// sellPrice = highest buy order (what you receive when instant-selling)
+						// buyPrice  = lowest sell offer (what you pay when instant-buying)
+						it.lines.add(
+							formatPrice(
+								Component.literal("Bazaar Buy Order"),
+								bazaarData.quickStatus.sellPrice * multiplier
+							)
 						)
-					)
-					it.lines.add(
-						formatPrice(
-							Component.literal("Bazaar Sell Offer"),
-							bazaarData.quickStatus.sellPrice * multiplier
+						it.lines.add(
+							formatPrice(
+								Component.literal("Bazaar Sell Offer"),
+								bazaarData.quickStatus.buyPrice * multiplier
+							)
 						)
-					)
+					}
+
+					BazaarPriceType.INSTANTPRICES -> {
+						// buyPrice  = lowest sell offer = what you pay to instant-buy
+						// sellPrice = highest buy order = what you receive when instant-selling
+						it.lines.add(
+							formatPrice(
+								Component.literal("Bazaar Instant Buy"),
+								bazaarData.quickStatus.buyPrice * multiplier
+							)
+						)
+						it.lines.add(
+							formatPrice(
+								Component.literal("Bazaar Instant Sell"),
+								bazaarData.quickStatus.sellPrice * multiplier
+							)
+						)
+					}
 				}
-
-				BazaarPriceType.INSTANTPRICES -> {
-					// Instant Buy uses sell offers (sellPrice), Instant Sell uses buy orders (buyPrice)
-					it.lines.add(
-						formatPrice(
-							Component.literal("Bazaar Instant Buy"),
-							bazaarData.quickStatus.sellPrice * multiplier
-						)
-					)
-					it.lines.add(
-						formatPrice(
-							Component.literal("Bazaar Instant Sell"),
-							bazaarData.quickStatus.buyPrice * multiplier
-						)
-					)
-				}
 			}
 
-			if (estValue != null) {
-				it.lines.add(formatPrice(Component.literal("Est. Item Value"), estValue * multiplier))
-			}
-			if (craftDirect != null) {
-				it.lines.add(formatPrice(Component.literal("Crafting Price (Direct, Buy Order)"), craftDirect * multiplier))
-			}
-			if (craftRecursive != null) {
-				it.lines.add(formatPrice(Component.literal("Crafting Price (Recursive, Buy Order)"), craftRecursive * multiplier))
-			}
-		} else if (lowestBin != null) {
-			it.lines.add(Component.literal(""))
-			it.lines.add(multiplierText)
-
-			it.lines.add(
-				formatPrice(
-					tr("firmament.tooltip.ah.lowestbin", "Lowest BIN"),
-					lowestBin * multiplier
-				)
-			)
-
-			// Skyblocker-like averages
-			if (avg1d != null) it.lines.add(formatPrice(Component.literal("1 Day Avg. Price"), avg1d * multiplier))
-			if (avg3d != null) it.lines.add(formatPrice(Component.literal("3 Day Avg. Price"), avg3d * multiplier))
-			if (avg7d != null) it.lines.add(formatPrice(Component.literal("7 Day Avg. Price"), avg7d * multiplier))
-
-			if (estValue != null) {
-				it.lines.add(formatPrice(Component.literal("Est. Item Value"), estValue * multiplier))
-			}
 			if (craftDirect != null) {
 				it.lines.add(formatPrice(Component.literal("Crafting Price (Direct, Buy Order)"), craftDirect * multiplier))
 			}
