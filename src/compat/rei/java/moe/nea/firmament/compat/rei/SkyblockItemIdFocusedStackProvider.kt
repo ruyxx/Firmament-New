@@ -6,6 +6,7 @@ import dev.architectury.event.CompoundEventResult
 import me.shedaniel.math.Point
 import me.shedaniel.rei.api.client.registry.screen.FocusedStackProvider
 import me.shedaniel.rei.api.common.entry.EntryStack
+import me.shedaniel.rei.api.common.entry.type.VanillaEntryTypes
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import moe.nea.firmament.mixins.accessor.AccessorHandledScreen
@@ -16,7 +17,7 @@ object SkyblockItemIdFocusedStackProvider : FocusedStackProvider {
         if (screen !is AccessorHandledScreen) return CompoundEventResult.pass()
         val focusedSlot = screen.focusedSlot_Firmament ?: return CompoundEventResult.pass()
         val item = focusedSlot.item ?: return CompoundEventResult.pass()
-        return CompoundEventResult.interruptTrue(SBItemEntryDefinition.getEntry(item))
+        return CompoundEventResult.interruptTrue(EntryStack.of(VanillaEntryTypes.ITEM, item))
     }
 
     override fun getPriority(): Double = 1_000_000.0

@@ -136,6 +136,7 @@ class FirmamentReiPlugin : REIClientPlugin {
 		)
 	}
 
+	@OptIn(ExpensiveItemCacheApi::class)
 	override fun registerCollapsibleEntries(registry: CollapsibleEntryRegistry) {
 		if (!RepoManager.shouldLoadREI()) return
 
@@ -145,7 +146,9 @@ class FirmamentReiPlugin : REIClientPlugin {
 					registry.group(
 						SkyblockId(parent).identifier,
 						Component.literal(RepoManager.getNEUItem(SkyblockId(parent))?.displayName ?: parent),
-						(children + parent).map { SBItemEntryDefinition.getEntry(SkyblockId(it)) })
+						(children + parent).map {
+							EntryStack.of(VanillaEntryTypes.ITEM, SBItemStack(SkyblockId(it)).asImmutableItemStack())
+						})
 				}
 	}
 
@@ -162,12 +165,13 @@ class FirmamentReiPlugin : REIClientPlugin {
 		registry.registerFocusedStack(SkyblockItemIdFocusedStackProvider)
 	}
 
+	@OptIn(ExpensiveItemCacheApi::class)
 	override fun registerEntries(registry: EntryRegistry) {
 		if (!RepoManager.shouldLoadREI()) return
 
 		registry.removeEntryIf { true }
 		RepoManager.neuRepo.items?.items?.values?.forEach { neuItem ->
-			registry.addEntry(SBItemEntryDefinition.getEntry(neuItem.skyblockId))
+			registry.addEntry(EntryStack.of(VanillaEntryTypes.ITEM, SBItemStack(neuItem.skyblockId).asImmutableItemStack()))
 		}
 	}
 }

@@ -27,6 +27,7 @@ import net.minecraft.world.entity.npc.villager.VillagerProfession
 import moe.nea.firmament.Firmament
 import moe.nea.firmament.compat.rei.EntityWidget
 import moe.nea.firmament.compat.rei.SBItemEntryDefinition
+import moe.nea.firmament.compat.rei.asSBItemStack
 import moe.nea.firmament.gui.entity.EntityRenderer
 import moe.nea.firmament.repo.ExpensiveItemCacheApi
 import moe.nea.firmament.repo.Reforge
@@ -146,14 +147,12 @@ class SBReforgeRecipe(
 		}
 
 		override fun getRecipeFor(entry: EntryStack<*>): Optional<List<SBReforgeRecipe>> {
-			if (entry.type != SBItemEntryDefinition.type) return Optional.empty()
-			val item = entry.castValue<SBItemStack>()
+			val item = entry.asSBItemStack() ?: return Optional.empty()
 			return getRecipesForSBItemStack(item)
 		}
 
 		override fun getUsageFor(entry: EntryStack<*>): Optional<List<SBReforgeRecipe>> {
-			if (entry.type != SBItemEntryDefinition.type) return Optional.empty()
-			val item = entry.castValue<SBItemStack>()
+			val item = entry.asSBItemStack() ?: return Optional.empty()
 			ReforgeStore.byReforgeStone[item.skyblockId]?.let { stoneReforge ->
 				return Optional.of(listOf(SBReforgeRecipe(stoneReforge, null)))
 			}

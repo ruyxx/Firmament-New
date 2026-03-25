@@ -10,12 +10,15 @@ import me.shedaniel.rei.api.client.registry.display.DynamicDisplayGenerator
 import me.shedaniel.rei.api.client.view.ViewSearchBuilder
 import me.shedaniel.rei.api.common.display.Display
 import me.shedaniel.rei.api.common.entry.EntryStack
+import me.shedaniel.rei.api.common.entry.type.VanillaEntryTypes
+import net.minecraft.world.item.ItemStack
 import moe.nea.firmament.compat.rei.recipes.SBKatRecipe
 import moe.nea.firmament.compat.rei.recipes.SBMobDropRecipe
 import moe.nea.firmament.compat.rei.recipes.SBShopRecipe
 import moe.nea.firmament.repo.EssenceRecipeProvider
 import moe.nea.firmament.repo.RepoManager
 import moe.nea.firmament.repo.SBItemStack
+import moe.nea.firmament.util.skyBlockId
 
 
 val SkyblockMobDropRecipeDynamicGenerator =
@@ -24,6 +27,20 @@ val SkyblockShopRecipeDynamicGenerator =
 	neuDisplayGenerator<SBShopRecipe, NEUNpcShopRecipe> { SBShopRecipe(it) }
 val SkyblockKatRecipeDynamicGenerator =
 	neuDisplayGenerator<SBKatRecipe, NEUKatUpgradeRecipe> { SBKatRecipe(it) }
+
+/**
+ * Extract an [SBItemStack] from an entry that is either a native [SBItemStack] entry
+ * or a vanilla [ItemStack] entry carrying a SkyBlock item ID in its custom NBT data.
+ */
+fun EntryStack<*>.asSBItemStack(): SBItemStack? {
+	if (type == SBItemEntryDefinition.type) return castValue()
+	if (type == VanillaEntryTypes.ITEM) {
+		val stack = castValue<ItemStack>()
+		val id = stack.skyBlockId ?: return null
+		return SBItemStack(id, stack.count)
+	}
+	return null
+}
 
 inline fun <D : Display, reified T : NEURecipe> neuDisplayGenerator(crossinline mapper: (T) -> D) =
 	neuDisplayGeneratorWithItem<D, T> { _, it -> mapper(it) }
@@ -35,8 +52,7 @@ inline fun <D : Display, T : NEURecipe> neuDisplayGeneratorWithItem(
 	crossinline mapper: (SBItemStack, T) -> D) =
 	object : DynamicDisplayGenerator<D> {
 		override fun getRecipeFor(entry: EntryStack<*>): Optional<List<D>> {
-			if (entry.type != SBItemEntryDefinition.type) return Optional.empty()
-			val item = entry.castValue<SBItemStack>()
+			val item = entry.asSBItemStack() ?: return Optional.empty()
 			val recipes = RepoManager.getRecipesFor(item.skyblockId)
 			val craftingRecipes = recipes.filterIsInstance<T>(filter)
 			return Optional.of(craftingRecipes.map { mapper(item, it) })
@@ -47,8 +63,7 @@ inline fun <D : Display, T : NEURecipe> neuDisplayGeneratorWithItem(
 		}
 
 		override fun getUsageFor(entry: EntryStack<*>): Optional<List<D>> {
-			if (entry.type != SBItemEntryDefinition.type) return Optional.empty()
-			val item = entry.castValue<SBItemStack>()
+			val item = entry.asSBItemStack() ?: return Optional.empty()
 			val recipes = RepoManager.getUsagesFor(item.skyblockId)
 			val craftingRecipes = recipes.filterIsInstance<T>(filter)
 			return Optional.of(craftingRecipes.map { mapper(item, it) })
