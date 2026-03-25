@@ -16,6 +16,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import moe.nea.firmament.compat.rei.FirmamentReiPlugin.Companion.asItemEntry
 import moe.nea.firmament.repo.ExpensiveItemCacheApi
+import moe.nea.firmament.repo.ItemCache
 import moe.nea.firmament.repo.RepoManager
 import moe.nea.firmament.repo.SBItemStack
 import moe.nea.firmament.util.SkyblockId
@@ -45,11 +46,13 @@ object SBItemEntryDefinition : EntryDefinition<SBItemStack> {
 
 	@OptIn(ExpensiveItemCacheApi::class)
 	override fun asFormattedText(entry: EntryStack<SBItemStack>, value: SBItemStack): Component {
-		val neuItem = entry.value.neuItem
-		return if (!RepoManager.TConfig.perfectRenders.rendersPerfectText() || entry.value.isWarm() || neuItem == null) {
+		val neuItem = value.neuItem
+		return if (value.isWarm() || neuItem == null) {
 			VanillaEntryTypes.ITEM.definition.asFormattedText(entry.asItemEntry(), value.asImmutableItemStack())
 		} else {
-			Component.literal(neuItem.displayName)
+			// Cache is still cold; convert legacy §-formatting codes to a Component
+			// without building the full ItemStack (no NBT parsing or DataFixer pass).
+			ItemCache.un189Lore(neuItem.displayName)
 		}
 	}
 

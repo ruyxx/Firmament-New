@@ -31,7 +31,8 @@ val SkyblockKatRecipeDynamicGenerator =
 /**
  * Extract an [SBItemStack] from an entry that is either a native [SBItemStack] entry
  * or a vanilla [ItemStack] entry carrying a SkyBlock item ID in its custom NBT data.
- * Returns `null` if the entry is neither type, or if a vanilla [ItemStack] entry lacks a SkyBlock ID.
+ * Returns `null` if the entry is neither type, if a vanilla [ItemStack] entry lacks a SkyBlock ID,
+ * or if a vanilla entry has malformed NBT that prevents ID extraction.
  */
 fun EntryStack<*>.asSBItemStack(): SBItemStack? {
 	if (type == SBItemEntryDefinition.type) return castValue()

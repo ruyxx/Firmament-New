@@ -40,7 +40,6 @@ import moe.nea.firmament.util.MC
 import moe.nea.firmament.util.SkyblockId
 import moe.nea.firmament.util.guessRecipeId
 import moe.nea.firmament.util.skyblockId
-import moe.nea.firmament.util.unformattedString
 
 
 class FirmamentReiPlugin : REIClientPlugin {
@@ -136,7 +135,6 @@ class FirmamentReiPlugin : REIClientPlugin {
 		)
 	}
 
-	@OptIn(ExpensiveItemCacheApi::class)
 	override fun registerCollapsibleEntries(registry: CollapsibleEntryRegistry) {
 		if (!RepoManager.shouldLoadREI()) return
 
@@ -147,7 +145,7 @@ class FirmamentReiPlugin : REIClientPlugin {
 						SkyblockId(parent).identifier,
 						Component.literal(RepoManager.getNEUItem(SkyblockId(parent))?.displayName ?: parent),
 						(children + parent).map {
-							EntryStack.of(VanillaEntryTypes.ITEM, SBItemStack(SkyblockId(it)).asImmutableItemStack())
+							SBItemEntryDefinition.getEntry(SBItemStack(SkyblockId(it)))
 						})
 				}
 	}
@@ -165,13 +163,12 @@ class FirmamentReiPlugin : REIClientPlugin {
 		registry.registerFocusedStack(SkyblockItemIdFocusedStackProvider)
 	}
 
-	@OptIn(ExpensiveItemCacheApi::class)
 	override fun registerEntries(registry: EntryRegistry) {
 		if (!RepoManager.shouldLoadREI()) return
 
-		registry.removeEntryIf { true }
+		registry.removeEntryIf { it.type == SBItemEntryDefinition.type }
 		RepoManager.neuRepo.items?.items?.values?.forEach { neuItem ->
-			registry.addEntry(EntryStack.of(VanillaEntryTypes.ITEM, SBItemStack(neuItem.skyblockId).asImmutableItemStack()))
+			registry.addEntry(SBItemEntryDefinition.getEntry(neuItem.skyblockId))
 		}
 	}
 }

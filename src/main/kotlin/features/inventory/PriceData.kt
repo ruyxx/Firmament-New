@@ -61,7 +61,9 @@ object PriceData {
 	// Pricing helpers
 	// -----------------------------
 
-	/** Market price for "BUY_ORDER" acquisition for crafting: Bazaar sellPrice (highest buy order = what you receive when instant-selling), else LBIN. */
+	/** Market price for "BUY_ORDER" acquisition for crafting: Bazaar sellPrice (highest buy order), else LBIN.
+	 *  In Hypixel's API, sellPrice = the highest outstanding buy order, i.e. what you receive when instant-selling.
+	 *  Placing your own buy order at this price is effectively what "buying via buy order" costs. */
 	private fun marketUnitPriceBuyOrder(id: SkyblockId): Double? {
 		HypixelStaticData.bazaarData[id.asBazaarStock]?.let { bz ->
 			// sellPrice = highest outstanding buy order = what you receive when instant-selling
