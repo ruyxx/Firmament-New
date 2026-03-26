@@ -56,11 +56,16 @@ object RepoDownloadManager {
 		if (RepoManager.TConfig.branch == "prerelease") {
 			RepoManager.TConfig.branch = "master"
 		}
-		val response =
-			HttpUtil.request("https://api.github.com/repos/${RepoManager.TConfig.username}/${RepoManager.TConfig.reponame}/commits/${branchOverride ?: RepoManager.TConfig.branch}")
-				.forJson<GithubCommitsResponse>()
-				.await()
-		return response.sha
+		return try {
+			val response =
+				HttpUtil.request("https://api.github.com/repos/${RepoManager.TConfig.username}/${RepoManager.TConfig.reponame}/commits/${branchOverride ?: RepoManager.TConfig.branch}")
+					.forJson<GithubCommitsResponse>()
+					.await()
+			response.sha
+		} catch (e: Exception) {
+			logger.warn("Failed to fetch latest repo SHA from GitHub", e)
+			null
+		}
 	}
 
 	private suspend fun downloadGithubArchive(url: String): Path = withContext(IO) {

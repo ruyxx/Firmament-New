@@ -130,14 +130,22 @@ object RepoManager {
 
 	fun downloadOverridenBranch(branch: String) {
 		Firmament.coroutineScope.launch {
-			RepoDownloadManager.downloadUpdate(true, branch)
+			try {
+				RepoDownloadManager.downloadUpdate(true, branch)
+			} catch (e: Exception) {
+				logger.error("Failed to download overridden repo branch '$branch'", e)
+			}
 			reload()
 		}
 	}
 
 	fun launchAsyncUpdate(force: Boolean = false) {
 		Firmament.coroutineScope.launch {
-			RepoDownloadManager.downloadUpdate(force)
+			try {
+				RepoDownloadManager.downloadUpdate(force)
+			} catch (e: Exception) {
+				logger.error("Failed to update repo", e)
+			}
 			reload()
 		}
 	}
