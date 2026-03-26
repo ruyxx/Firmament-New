@@ -160,7 +160,6 @@ class FirmamentReiPlugin : REIClientPlugin {
 				return InteractionResult.SUCCESS
 			}
 		})
-		registry.registerFocusedStack(SkyblockItemIdFocusedStackProvider)
 	}
 
 	override fun registerEntries(registry: EntryRegistry) {
