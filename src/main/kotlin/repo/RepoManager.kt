@@ -6,20 +6,15 @@ import io.github.moulberry.repo.data.NEUItem
 import io.github.moulberry.repo.data.NEURecipe
 import io.github.moulberry.repo.data.Rarity
 import java.nio.file.Path
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import net.minecraft.client.Minecraft
-import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket
-import net.minecraft.world.item.crafting.SelectableRecipe
 import net.minecraft.util.StringRepresentable
 import moe.nea.firmament.Firmament
 import moe.nea.firmament.Firmament.logger
 import moe.nea.firmament.events.ReloadRegistrationEvent
 import moe.nea.firmament.util.ErrorUtil
 import moe.nea.firmament.util.MC
-import moe.nea.firmament.util.MinecraftDispatcher
 import moe.nea.firmament.util.SkyblockId
 import moe.nea.firmament.util.TestUtil
 import moe.nea.firmament.util.data.Config
@@ -70,8 +65,6 @@ object RepoManager {
 
 	val currentDownloadedSha by RepoDownloadManager::latestSavedVersionHash
 
-	var recentlyFailedToUpdateItemList = false
-
 	val essenceRecipeProvider = EssenceRecipeProvider()
 	val recipeCache = BetterRepoRecipeCache(essenceRecipeProvider, ReforgeStore)
 	val miningData = MiningRepoData()
@@ -93,15 +86,6 @@ object RepoManager {
 			registerReloadListener(enchantedBookCache)
 			registerReloadListener(enchantData)
 			ReloadRegistrationEvent.publish(ReloadRegistrationEvent(this))
-			registerReloadListener {
-				if (TestUtil.isInTest) return@registerReloadListener
-				Firmament.coroutineScope.launch(MinecraftDispatcher) {
-					if (!trySendClientboundUpdateRecipesPacket()) {
-						logger.warn("Failed to issue a ClientboundUpdateRecipesPacket (to reload REI). This may lead to an outdated item list.")
-						recentlyFailedToUpdateItemList = true
-					}
-				}
-			}
 		}
 	}
 
@@ -113,31 +97,26 @@ object RepoManager {
 	fun getRecipesFor(skyblockId: SkyblockId): Set<NEURecipe> = recipeCache.recipes[skyblockId] ?: setOf()
 	fun getUsagesFor(skyblockId: SkyblockId): Set<NEURecipe> = recipeCache.usages[skyblockId] ?: setOf()
 
-	private fun trySendClientboundUpdateRecipesPacket(): Boolean {
-		return Minecraft.getInstance().level != null && Minecraft.getInstance().connection?.handleUpdateRecipes(
-			ClientboundUpdateRecipesPacket(mutableMapOf(), SelectableRecipe.SingleInputSet.empty())
-		) != null
-	}
-
-	init {
-		ClientTickEvents.START_WORLD_TICK.register(ClientTickEvents.StartWorldTick {
-			if (recentlyFailedToUpdateItemList && trySendClientboundUpdateRecipesPacket())
-				recentlyFailedToUpdateItemList = false
-		})
-	}
-
 	fun getNEUItem(skyblockId: SkyblockId): NEUItem? = neuRepo.items.getItemBySkyblockId(skyblockId.neuItem)
 
 	fun downloadOverridenBranch(branch: String) {
 		Firmament.coroutineScope.launch {
-			RepoDownloadManager.downloadUpdate(true, branch)
+			try {
+				RepoDownloadManager.downloadUpdate(true, branch)
+			} catch (e: Exception) {
+				logger.error("Failed to download overridden repo branch '$branch'", e)
+			}
 			reload()
 		}
 	}
 
 	fun launchAsyncUpdate(force: Boolean = false) {
 		Firmament.coroutineScope.launch {
-			RepoDownloadManager.downloadUpdate(force)
+			try {
+				RepoDownloadManager.downloadUpdate(force)
+			} catch (e: Exception) {
+				logger.error("Failed to update repo", e)
+			}
 			reload()
 		}
 	}

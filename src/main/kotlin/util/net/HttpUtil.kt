@@ -7,6 +7,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.ByteBuffer
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.Flow
@@ -18,6 +19,7 @@ import moe.nea.firmament.Firmament
 object HttpUtil {
 	val httpClient = HttpClient.newBuilder()
 		.followRedirects(HttpClient.Redirect.NORMAL)
+		.connectTimeout(Duration.ofSeconds(30))
 		.build()
 
 	data class Request(val request: HttpRequest.Builder) {

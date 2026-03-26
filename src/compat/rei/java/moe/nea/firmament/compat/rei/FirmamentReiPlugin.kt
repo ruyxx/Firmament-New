@@ -5,7 +5,6 @@ import me.shedaniel.rei.api.client.plugins.REIClientPlugin
 import me.shedaniel.rei.api.client.registry.category.CategoryRegistry
 import me.shedaniel.rei.api.client.registry.display.DisplayRegistry
 import me.shedaniel.rei.api.client.registry.entry.CollapsibleEntryRegistry
-import me.shedaniel.rei.api.client.registry.entry.EntryRegistry
 import me.shedaniel.rei.api.client.registry.screen.ExclusionZones
 import me.shedaniel.rei.api.client.registry.screen.OverlayDecider
 import me.shedaniel.rei.api.client.registry.screen.ScreenRegistry
@@ -40,7 +39,6 @@ import moe.nea.firmament.util.MC
 import moe.nea.firmament.util.SkyblockId
 import moe.nea.firmament.util.guessRecipeId
 import moe.nea.firmament.util.skyblockId
-import moe.nea.firmament.util.unformattedString
 
 
 class FirmamentReiPlugin : REIClientPlugin {
@@ -145,7 +143,9 @@ class FirmamentReiPlugin : REIClientPlugin {
 					registry.group(
 						SkyblockId(parent).identifier,
 						Component.literal(RepoManager.getNEUItem(SkyblockId(parent))?.displayName ?: parent),
-						(children + parent).map { SBItemEntryDefinition.getEntry(SkyblockId(it)) })
+						(children + parent).map {
+							SBItemEntryDefinition.getEntry(SBItemStack(SkyblockId(it)))
+						})
 				}
 	}
 
@@ -159,15 +159,5 @@ class FirmamentReiPlugin : REIClientPlugin {
 				return InteractionResult.SUCCESS
 			}
 		})
-		registry.registerFocusedStack(SkyblockItemIdFocusedStackProvider)
-	}
-
-	override fun registerEntries(registry: EntryRegistry) {
-		if (!RepoManager.shouldLoadREI()) return
-
-		registry.removeEntryIf { true }
-		RepoManager.neuRepo.items?.items?.values?.forEach { neuItem ->
-			registry.addEntry(SBItemEntryDefinition.getEntry(neuItem.skyblockId))
-		}
 	}
 }
