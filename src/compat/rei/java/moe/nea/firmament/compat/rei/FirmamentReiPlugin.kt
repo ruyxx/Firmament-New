@@ -167,8 +167,5 @@ class FirmamentReiPlugin : REIClientPlugin {
 		if (!RepoManager.shouldLoadREI()) return
 
 		registry.removeEntryIf { it.type == SBItemEntryDefinition.type }
-		RepoManager.neuRepo.items?.items?.values?.forEach { neuItem ->
-			registry.addEntry(SBItemEntryDefinition.getEntry(neuItem.skyblockId))
-		}
 	}
 }
